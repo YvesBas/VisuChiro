@@ -7,6 +7,7 @@ library(data.table)
 library(lubridate)
 library(clipr)
 
+
 options(shiny.maxRequestSize=30*1024^2)
 
 # Define server logic required to draw a scatter plot
@@ -19,7 +20,7 @@ shinyServer(function(input, output,session) {
       
       ms = 4
       SpeciesList <- fread("SpeciesList.csv", encoding = "Latin-1")
-      SpeciesList$color=factor(SpeciesList$Esp)
+      # SpeciesList$color=factor(SpeciesList$Esp)
       groupes=unique(SpeciesList$GroupFR)
       especes=unique(SpeciesList$Esp)
       infile <- input$fileParticipation
@@ -70,6 +71,8 @@ shinyServer(function(input, output,session) {
       coupe <- unlist(strsplit(fichierslash,"/"))
       titre <- substr(coupe[length(coupe)], 1, nchar(coupe[length(coupe)])-4)
       fichiervu <<- isolate(gsub(".csv","_Vu.csv",input$fileParticipation))
+      AlleYoupi5 <- AlleYoupi5[ , -which(colnames(AlleYoupi5) == "color")]
+      AlleYoupi5 <- merge(AlleYoupi5, SpeciesList, by.x = "tadarida_taxon", by.y = "Esp", all.x = TRUE, all.y = FALSE)
       AlleYoupi5
     })
     
@@ -142,6 +145,7 @@ shinyServer(function(input, output,session) {
       toplot <- subset(AlleYoupi6, AlleYoupi6$DateHeure >= mintemps & AlleYoupi6$DateHeure <= maxtemps & AlleYoupi6$tadarida_probabilite >= input$conf[1] &  AlleYoupi6$tadarida_probabilite <= input$conf[2]) #+s?lection sur les indices de confiance
       toplot <- subset(toplot,toplot$frequence_mediane>=input$frequence_mediane[1]) #selection par fr?quence m?diane (pour ?viter d'afficher des fr?quences inutiles)
       toplot <- subset(toplot,toplot$frequence_mediane<=input$frequence_mediane[2])
+      print(toplot[1, ])
       
       toplot <- droplevels(toplot)
 
@@ -173,7 +177,7 @@ shinyServer(function(input, output,session) {
       sp() %>%
         ggvis(~DateHeure, ~parametre, key:= ~Affiche) %>%
         
-        layer_points(size = ~tadarida_probabilite*20, fill = ~color, stroke = 1, shape = ~shape) %>%
+        layer_points(size = ~tadarida_probabilite*20, fill = ~color, stroke = 1, shape = ~symbol) %>%
         #layer_points(size = ~tadarida_probabilite*2, fill = ~factor(tadarida_taxon), stroke = 1) %>%
         set_options(width = 820, height = 540, padding = padding(5, 90, 40, 120)) %>%
         hide_legend("stroke") %>%
