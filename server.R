@@ -144,7 +144,7 @@ shinyServer(function(input, output,session) {
       toplot <- subset(toplot,toplot$frequence_mediane<=input$frequence_mediane[2])
       
       toplot <- droplevels(toplot)
-      
+
       if (input$idchoix != "Tous")  subset(toplot, toplot$groupe == input$idchoix)
       else {
         if (input$especechoix != "Toutes")
@@ -173,7 +173,7 @@ shinyServer(function(input, output,session) {
       sp() %>%
         ggvis(~DateHeure, ~parametre, key:= ~Affiche) %>%
         
-        layer_points(size = ~tadarida_probabilite*20, fill = ~color, stroke = 1, shape = ~color) %>%
+        layer_points(size = ~tadarida_probabilite*20, fill = ~color, stroke = 1, shape = ~shape) %>%
         #layer_points(size = ~tadarida_probabilite*2, fill = ~factor(tadarida_taxon), stroke = 1) %>%
         set_options(width = 820, height = 540, padding = padding(5, 90, 40, 120)) %>%
         hide_legend("stroke") %>%
