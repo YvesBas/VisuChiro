@@ -72,6 +72,16 @@ shinyServer(function(input, output,session) {
       titre <- substr(coupe[length(coupe)], 1, nchar(coupe[length(coupe)])-4)
       fichiervu <<- isolate(gsub(".csv","_Vu.csv",input$fileParticipation))
       AlleYoupi5 <- AlleYoupi5[ , -which(colnames(AlleYoupi5) == "color")]
+      
+      ## Create fixed shape-color ----
+      
+      symbols <- c("circle", "square", "cross", "diamond", "triangle-up", "triangle-down")
+      colors  <- 1:40
+      
+      shapes_colors <- expand.grid("symbol" = symbols,  "color" = colors)
+      SpeciesList <- as.data.frame(SpeciesList[ , 1:11])
+      SpeciesList <- merge(SpeciesList, shapes_colors, by = "row.names", all.y = FALSE)
+      
       AlleYoupi5 <- merge(AlleYoupi5, SpeciesList, by.x = "tadarida_taxon", by.y = "Esp", all.x = TRUE, all.y = FALSE)
       AlleYoupi5
     })
@@ -175,51 +185,69 @@ shinyServer(function(input, output,session) {
       # mysp <- readr::read_rds("sp_shiny.rds")
       
       sp() %>%
+        
         ggvis(~DateHeure, ~parametre, key:= ~Affiche) %>%
         
-        layer_points(size = ~tadarida_probabilite*20, fill = ~color, stroke = 1, shape = ~symbol) %>%
-        #layer_points(size = ~tadarida_probabilite*2, fill = ~factor(tadarida_taxon), stroke = 1) %>%
-        set_options(width = 820, height = 540, padding = padding(5, 90, 40, 120)) %>%
+        layer_points(size   = ~tadarida_probabilite * 20, 
+                     fill   = ~factor(tadarida_taxon), 
+                     stroke = 1, 
+                     shape  = ~factor(tadarida_taxon)) %>%
+
+        set_options(width   = 820, 
+                    height  = 540, 
+                    padding = padding(5, 90, 40, 120)) %>%
+        
         hide_legend("stroke") %>%
         hide_legend("size") %>%
-        add_legend(c("shape","fill"),
-                   title = "Especes") %>% #l?gende des formes/groupes
+        
+        add_legend(c("shape", "fill"), title = "Especes") %>%
+        
         hide_legend("size") %>%
         
         
-        add_tooltip(function(data){
-          soundexe <- paste(unlist(strsplit(data$Affiche, " ")[1])[1], ".wav", sep="");
+        add_tooltip(function(data) {
+          
+          soundexe <- paste0(unlist(strsplit(data$"Affiche", " ")[1])[1], ".wav")
           #soundexe <- paste(wavdir, "\\", unlist(strsplit(data$Affiche, " ")[1])[1], ".wav", sep="");
           #ConfigSyrinx[7,1]=paste0("Sound file name=",soundexe);
           #ConfigSyrinx[8,1]=paste0("Sound file title=",basename(soundexe));
           #fwrite(ConfigSyrinx,"temp.dsp");
           #shell.exec("temp.dsp")}, "click") %>%
           #shell.exec(soundexe)}, "click") %>%
-          write_clip(soundexe)}, "click") %>%
+          write_clip(soundexe)
+        }, "click") %>%
         
-        add_tooltip(function(data){ qui <- which(AlleYoupi5$Affiche == data$Affiche) #affichage d'?tiquette en fonction de la position du curseur
-        ; output$table2 <- renderTable(AlleYoupi5[qui, ])
-        reactiveValues()
+        add_tooltip(function(data) {
+          
+          qui <- which(AlleYoupi5$Affiche == data$Affiche) #affichage d'?tiquette en fonction de la position du curseur
+          output$"table2" <- renderTable(AlleYoupi5[qui, ])
+          reactiveValues()
         
-        if (input$submit > submit0) { #si on a cliqu? sur "valider"
+        if (input$"submit" > submit0) { #si on a cliqu? sur "valider"
+          
           AlleYoupi5[qui, 8:9] <<- isolate(c(input$espececorrige,input$probacorrige))
-          if(!exists("AlleYoupi8")){AlleYoupi8 <- AlleYoupi5[0, ]} #tableau qui s'affiche dans le dernier onglet de l'appli (validations faites)
-          AlleYoupi8 <<- isolate(unique(rbind(AlleYoupi5[qui, ],AlleYoupi8))) #incr?mente les validations dans AlleYoupi8
+          
+          if (!exists("AlleYoupi8")) {
+            AlleYoupi8 <- AlleYoupi5[0, ]
+          } #tableau qui s'affiche dans le dernier onglet de l'appli (validations faites)
+          
+          AlleYoupi8 <<- isolate(unique(rbind(AlleYoupi5[qui, ], AlleYoupi8))) #incr?mente les validations dans AlleYoupi8
           #AlleYoupi7 <<- isolate(AlleYoupi5) #tableau avec validations ? sauver
-          AlleYoupi7 <<- isolate(unique((rbind(AlleYoupi8,AlleYoupi5))
-                                        )) #tableau avec validations ? sauver
-          AlleYoupi7<<-unique(as.data.table(AlleYoupi7),by=c("nom du fichier","tadarida_taxon"))
-          AlleYoupi7<<-AlleYoupi7[order(AlleYoupi7$`nom du fichier`),]
-          submit0 <<- input$submit}
-        output$table3 <- renderDataTable({AlleYoupi8 }) #affiche AlleYoupi8 dans le dernier onglet
-        output$table4 <- renderDataTable({AlleYoupi7 }) #affiche AlleYoupi8 dans le dernier onglet
+          AlleYoupi7 <<- isolate(unique((rbind(AlleYoupi8, AlleYoupi5)))) #tableau avec validations ? sauver
+          AlleYoupi7 <<- unique(as.data.table(AlleYoupi7), by = c("nom du fichier","tadarida_taxon"))
+          AlleYoupi7 <<- AlleYoupi7[order(AlleYoupi7$`nom du fichier`), ]
+          submit0 <<- input$"submit"
+        }
+          
+        output$table3 <- renderDataTable({ AlleYoupi8 }) #affiche AlleYoupi8 dans le dernier onglet
+        output$table4 <- renderDataTable({ AlleYoupi7 }) #affiche AlleYoupi8 dans le dernier onglet
         
         #  Sauver imm?diatement cette table modifi?e.
-        }
-        , "click") %>%
-        add_tooltip(function(data){ paste0(data$Affiche)}, "hover") %>% #d?finir l'affichage quand on "survole" des points dans le graphe
-        bind_shiny("plot", "plot_ui")
-      
+      }, "click") %>%
+        
+      add_tooltip(function(data) { paste0(data$Affiche) }, "hover") %>% #d?finir l'affichage quand on "survole" des points dans le graphe
+        
+      bind_shiny("plot", "plot_ui")
     })
     
     # output$table <- renderDataTable({
@@ -241,12 +269,13 @@ shinyServer(function(input, output,session) {
     # options = list(iDisplayLength = 100)
     # )
     #output$rowno <- renderPrint({ rown })
-    output$downloadData <- downloadHandler(
+    
+    output$"downloadData" <- downloadHandler(
       #filename="temp.csv",
-      filename=function(){fichiervu},
-      content = function(file) {
-        fwrite(AlleYoupi7, file,row.names=F,na="",sep=";")
-      })
+      filename = function() fichiervu,
+      content  = function(file) {
+        fwrite(AlleYoupi7, file, row.names = FALSE, na = "", sep = ";")
+    })
     
     #on.exit(rm(list= ls()))
     #onStop(function() rm(list=c("AlleYoupi7","AlleYoupi8","fichiervu")))
