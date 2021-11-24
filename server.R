@@ -63,7 +63,7 @@ shinyServer(function(input, output,session) {
       gpnames <-append("Tous", sort(as.character(unique(AlleYoupi5$Groupe))))
       spnames <-append("Toutes", sort(as.character(unique(AlleYoupi5$tadarida_taxon))))
       timespan <- max(DateHeure) - min(DateHeure)
-      sliderlabel <- paste("Intervalle depuis: ", min(AlleYoupi5$DateHeure), "  jusqu'Ã  ", max(AlleYoupi5$DateHeure), sep = "")
+      sliderlabel <- paste("Intervalle depuis: ", min(AlleYoupi5$DateHeure), "  jusqu'a ", max(AlleYoupi5$DateHeure), sep = "")
       mintemps <- min(DateHeure)
       maxtemps <- max(DateHeure)
       fichierslash <- gsub("\\\\", "/", infile$datapath)
@@ -106,7 +106,7 @@ shinyServer(function(input, output,session) {
       df <- donneesParticipation()
       if (is.null(df)) return(NULL)
       selectInput("especechoix", #esp?ce ? afficher
-                  "EspÃ¨ce :",
+                  "Espece :",
                   c("Toutes",
                     sort(unique(as.character(df$tadarida_taxon)))))
     })
@@ -117,7 +117,7 @@ shinyServer(function(input, output,session) {
       mintemps <- min(df$DateHeure)
       maxtemps <- max(df$DateHeure)
       sliderInput("heures",
-                  label = paste("Intervalle depuis: ", mintemps, "  jusqu'Ã  ", maxtemps, sep = ""),
+                  label = paste("Intervalle depuis: ", mintemps, "  jusqu'a ", maxtemps, sep = ""),
                   min = 0, max = 100, value = c(0, 100), width = "89%")
     })
     
@@ -142,6 +142,8 @@ shinyServer(function(input, output,session) {
       toplot <- subset(AlleYoupi6, AlleYoupi6$DateHeure >= mintemps & AlleYoupi6$DateHeure <= maxtemps & AlleYoupi6$tadarida_probabilite >= input$conf[1] &  AlleYoupi6$tadarida_probabilite <= input$conf[2]) #+s?lection sur les indices de confiance
       toplot <- subset(toplot,toplot$frequence_mediane>=input$frequence_mediane[1]) #selection par fr?quence m?diane (pour ?viter d'afficher des fr?quences inutiles)
       toplot <- subset(toplot,toplot$frequence_mediane<=input$frequence_mediane[2])
+      
+      toplot <- droplevels(toplot)
       
       if (input$idchoix != "Tous")  subset(toplot, toplot$groupe == input$idchoix)
       else {
@@ -179,6 +181,8 @@ shinyServer(function(input, output,session) {
         add_legend(c("shape","fill"),
                    title = "Especes") %>% #l?gende des formes/groupes
         hide_legend("size") %>%
+        
+        
         add_tooltip(function(data){
           soundexe <- paste(unlist(strsplit(data$Affiche, " ")[1])[1], ".wav", sep="");
           #soundexe <- paste(wavdir, "\\", unlist(strsplit(data$Affiche, " ")[1])[1], ".wav", sep="");
