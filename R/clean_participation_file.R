@@ -11,7 +11,7 @@
 #' @export
 #'
 #' @examples
-clean_participation_file <- function (participation_file = "participation-6176abef454c9f0d79509239-observations.csv", species_list = "SpeciesList.csv", ms = 4) {
+clean_participation_file <- function (participation_file, species_list = "SpeciesList.csv", ms = 4) {
   
   SpeciesList <- data.table::fread(species_list, encoding = "Latin-1")
   SpeciesList$color=factor(SpeciesList$Esp)
@@ -23,7 +23,7 @@ clean_participation_file <- function (participation_file = "participation-6176ab
     return(NULL)      
   }
   #if(!exists("AlleYoupi5")){
-  AlleYoupi5 = data.table::fread(participation_file)
+  AlleYoupi5 = data.table::fread(participation_file$datapath)
   #}
   
   ####### Construction de la colonne DateHeure compatible POSIX

@@ -18,7 +18,7 @@ shinyServer(function(input, output,session) {
   
   observeEvent(input$do, {
     
-    participation_parameters <- clean_participation_file(participation_file = input$fileParticipation$datapath, species_list = "SpeciesList.csv", ms = 4)
+    participation_parameters <- clean_participation_file(participation_file = input$fileParticipation, species_list = "SpeciesList.csv", ms = 4)
     
     local$AlleYoupi8 <- participation_parameters$AlleYoupi8
     local$AlleYoupi5 <- participation_parameters$AlleYoupi5
