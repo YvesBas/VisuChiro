@@ -7,7 +7,9 @@ library(data.table)
 library(lubridate)
 library(clipr)
 
-options(shiny.maxRequestSize=30*1024^2)
+source(here::here("R", "ggvis_plot.R"))
+
+options(shiny.maxRequestSize = 30 * 1024 ^ 2)
 
 # Define server logic required to draw a scatter plot
 shinyServer(function(input, output,session) {
@@ -19,7 +21,7 @@ shinyServer(function(input, output,session) {
       
       ms = 4
       SpeciesList <- fread("SpeciesList.csv", encoding = "Latin-1")
-      SpeciesList$color=factor(SpeciesList$Esp)
+      # SpeciesList$color=factor(SpeciesList$Esp)
       groupes=unique(SpeciesList$GroupFR)
       especes=unique(SpeciesList$Esp)
       infile <- input$fileParticipation
@@ -63,13 +65,35 @@ shinyServer(function(input, output,session) {
       gpnames <-append("Tous", sort(as.character(unique(AlleYoupi5$Groupe))))
       spnames <-append("Toutes", sort(as.character(unique(AlleYoupi5$tadarida_taxon))))
       timespan <- max(DateHeure) - min(DateHeure)
-      sliderlabel <- paste("Intervalle depuis: ", min(AlleYoupi5$DateHeure), "  jusqu'Ã  ", max(AlleYoupi5$DateHeure), sep = "")
+      sliderlabel <- paste("Intervalle depuis: ", min(AlleYoupi5$DateHeure), "  jusqu'a ", max(AlleYoupi5$DateHeure), sep = "")
       mintemps <- min(DateHeure)
       maxtemps <- max(DateHeure)
       fichierslash <- gsub("\\\\", "/", infile$datapath)
       coupe <- unlist(strsplit(fichierslash,"/"))
       titre <- substr(coupe[length(coupe)], 1, nchar(coupe[length(coupe)])-4)
       fichiervu <<- isolate(gsub(".csv","_Vu.csv",input$fileParticipation))
+      AlleYoupi5 <- AlleYoupi5[ , -which(colnames(AlleYoupi5) == "color")]
+      
+      ## Create fixed shape-color ----
+      
+      # symbols <- c("circle", "square", "cross", "diamond", "triangle-up", "triangle-down")
+      # colors  <- 1:40
+      # shapes_colors <- expand.grid("symbol" = symbols,  "color" = colors)
+      # SpeciesList <- as.data.frame(SpeciesList[ , 1:11])
+      # SpeciesList <- merge(SpeciesList, shapes_colors, by = "row.names", all.y = FALSE)
+      
+      SpeciesList <- as.data.frame(SpeciesList)
+      
+      symbols <- c("circle", "square", "cross", "diamond", "triangle-up", "triangle-down")
+      
+      for (i in 1:length(symbols)) {
+        pos <- which(SpeciesList$"symbol" == i)
+        if (length(pos)) {
+          SpeciesList[pos, "symbol"] <- symbols[i]
+        }
+      }
+      
+      AlleYoupi5 <- merge(AlleYoupi5, SpeciesList, by.x = "tadarida_taxon", by.y = "Esp", all.x = TRUE, all.y = FALSE)
       AlleYoupi5
     })
     
@@ -106,7 +130,7 @@ shinyServer(function(input, output,session) {
       df <- donneesParticipation()
       if (is.null(df)) return(NULL)
       selectInput("especechoix", #esp?ce ? afficher
-                  "EspÃ¨ce :",
+                  "Espece :",
                   c("Toutes",
                     sort(unique(as.character(df$tadarida_taxon)))))
     })
@@ -117,7 +141,7 @@ shinyServer(function(input, output,session) {
       mintemps <- min(df$DateHeure)
       maxtemps <- max(df$DateHeure)
       sliderInput("heures",
-                  label = paste("Intervalle depuis: ", mintemps, "  jusqu'Ã  ", maxtemps, sep = ""),
+                  label = paste("Intervalle depuis: ", mintemps, "  jusqu'a ", maxtemps, sep = ""),
                   min = 0, max = 100, value = c(0, 100), width = "89%")
     })
     
@@ -142,7 +166,10 @@ shinyServer(function(input, output,session) {
       toplot <- subset(AlleYoupi6, AlleYoupi6$DateHeure >= mintemps & AlleYoupi6$DateHeure <= maxtemps & AlleYoupi6$tadarida_probabilite >= input$conf[1] &  AlleYoupi6$tadarida_probabilite <= input$conf[2]) #+s?lection sur les indices de confiance
       toplot <- subset(toplot,toplot$frequence_mediane>=input$frequence_mediane[1]) #selection par fr?quence m?diane (pour ?viter d'afficher des fr?quences inutiles)
       toplot <- subset(toplot,toplot$frequence_mediane<=input$frequence_mediane[2])
+      print(toplot[1, ])
       
+      toplot <- droplevels(toplot)
+
       if (input$idchoix != "Tous")  subset(toplot, toplot$groupe == input$idchoix)
       else {
         if (input$especechoix != "Toutes")
@@ -155,63 +182,41 @@ shinyServer(function(input, output,session) {
     
     
     observe({
+      
       req(sp())
-      #if(!exists("AlleYoupi5"))
-      #{
+      
+      # if(!exists("AlleYoupi5")) {
       AlleYoupi5 <- donneesParticipation()
-      #}
-      wavdir <- wavdir()
+      # }
+      
+      wavdir  <- wavdir()
       submit0 <- 0 #initialisation du fichier s?lectionner sur le graphe par click ?
       
-      #browser()
       
+      ### DEBUG MODE - Graph ----
+      
+      # browser()
       # readr::write_rds(sp(), "sp_shiny.rds")
       # mysp <- readr::read_rds("sp_shiny.rds")
       
-      sp() %>%
-        ggvis(~DateHeure, ~parametre, key:= ~Affiche) %>%
-        
-        layer_points(size = ~tadarida_probabilite*20, fill = ~color, stroke = 1, shape = ~color) %>%
-        #layer_points(size = ~tadarida_probabilite*2, fill = ~factor(tadarida_taxon), stroke = 1) %>%
-        set_options(width = 820, height = 540, padding = padding(5, 90, 40, 120)) %>%
-        hide_legend("stroke") %>%
-        hide_legend("size") %>%
-        add_legend(c("shape","fill"),
-                   title = "Especes") %>% #l?gende des formes/groupes
-        hide_legend("size") %>%
-        add_tooltip(function(data){
-          soundexe <- paste(unlist(strsplit(data$Affiche, " ")[1])[1], ".wav", sep="");
-          #soundexe <- paste(wavdir, "\\", unlist(strsplit(data$Affiche, " ")[1])[1], ".wav", sep="");
-          #ConfigSyrinx[7,1]=paste0("Sound file name=",soundexe);
-          #ConfigSyrinx[8,1]=paste0("Sound file title=",basename(soundexe));
-          #fwrite(ConfigSyrinx,"temp.dsp");
-          #shell.exec("temp.dsp")}, "click") %>%
-          #shell.exec(soundexe)}, "click") %>%
-          write_clip(soundexe)}, "click") %>%
-        
-        add_tooltip(function(data){ qui <- which(AlleYoupi5$Affiche == data$Affiche) #affichage d'?tiquette en fonction de la position du curseur
-        ; output$table2 <- renderTable(AlleYoupi5[qui, ])
-        reactiveValues()
-        
-        if (input$submit > submit0) { #si on a cliqu? sur "valider"
-          AlleYoupi5[qui, 8:9] <<- isolate(c(input$espececorrige,input$probacorrige))
-          if(!exists("AlleYoupi8")){AlleYoupi8 <- AlleYoupi5[0, ]} #tableau qui s'affiche dans le dernier onglet de l'appli (validations faites)
-          AlleYoupi8 <<- isolate(unique(rbind(AlleYoupi5[qui, ],AlleYoupi8))) #incr?mente les validations dans AlleYoupi8
-          #AlleYoupi7 <<- isolate(AlleYoupi5) #tableau avec validations ? sauver
-          AlleYoupi7 <<- isolate(unique((rbind(AlleYoupi8,AlleYoupi5))
-                                        )) #tableau avec validations ? sauver
-          AlleYoupi7<<-unique(as.data.table(AlleYoupi7),by=c("nom du fichier","tadarida_taxon"))
-          AlleYoupi7<<-AlleYoupi7[order(AlleYoupi7$`nom du fichier`),]
-          submit0 <<- input$submit}
-        output$table3 <- renderDataTable({AlleYoupi8 }) #affiche AlleYoupi8 dans le dernier onglet
-        output$table4 <- renderDataTable({AlleYoupi7 }) #affiche AlleYoupi8 dans le dernier onglet
-        
-        #  Sauver imm?diatement cette table modifi?e.
-        }
-        , "click") %>%
-        add_tooltip(function(data){ paste0(data$Affiche)}, "hover") %>% #d?finir l'affichage quand on "survole" des points dans le graphe
-        bind_shiny("plot", "plot_ui")
+      ### END OF DEBUG MODE ----
+     
       
+      ## Create ggvis plot ----
+      
+      ggvis_outputs <- sp() %>% 
+        ggvis_plot(AlleYoupi5, AlleYoupi7, AlleYoupi8, input$"submit", 
+                   input$"espececorrige", input$"probacorrige", submit0)
+      
+      ggvis_outputs[["gplot"]] %>% bind_shiny("plot", "plot_ui")
+      
+      
+      ## Extract outputs ----
+      
+      AlleYoupi5 <- ggvis_outputs[["AlleYoupi5"]]
+      AlleYoupi7 <- ggvis_outputs[["AlleYoupi7"]]
+      AlleYoupi8 <- ggvis_outputs[["AlleYoupi8"]]
+      submit0    <- ggvis_outputs[["submit0"]]
     })
     
     # output$table <- renderDataTable({
@@ -233,12 +238,13 @@ shinyServer(function(input, output,session) {
     # options = list(iDisplayLength = 100)
     # )
     #output$rowno <- renderPrint({ rown })
-    output$downloadData <- downloadHandler(
+    
+    output$"downloadData" <- downloadHandler(
       #filename="temp.csv",
-      filename=function(){fichiervu},
-      content = function(file) {
-        fwrite(AlleYoupi7, file,row.names=F,na="",sep=";")
-      })
+      filename = function() fichiervu,
+      content  = function(file) {
+        fwrite(AlleYoupi7, file, row.names = FALSE, na = "", sep = ";")
+    })
     
     #on.exit(rm(list= ls()))
     #onStop(function() rm(list=c("AlleYoupi7","AlleYoupi8","fichiervu")))

@@ -32,7 +32,7 @@ shinyUI(
                  uiOutput("idchoix"),
                  uiOutput("especechoix"),
                  sliderInput("conf", #s?lection sur le score de Tadarida
-                             label = "Indice de confiance de l'espèce :",
+                             label = "Indice de confiance de l'espece :",
                              min = 0, max = 1, value = c(0.5, 1))
                  ,
                  sliderInput("frequence_mediane", #s?lection sur la fr?quence m?diane
