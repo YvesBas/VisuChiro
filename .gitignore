@@ -2,5 +2,8 @@
 .Rhistory
 .RData
 .Ruserdata
+<<<<<<< HEAD
 sp_shiny.rds
 
+=======
+>>>>>>> upstream/main
