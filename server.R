@@ -76,12 +76,22 @@ shinyServer(function(input, output,session) {
       
       ## Create fixed shape-color ----
       
-      symbols <- c("circle", "square", "cross", "diamond", "triangle-up", "triangle-down")
-      colors  <- 1:40
+      # symbols <- c("circle", "square", "cross", "diamond", "triangle-up", "triangle-down")
+      # colors  <- 1:40
+      # shapes_colors <- expand.grid("symbol" = symbols,  "color" = colors)
+      # SpeciesList <- as.data.frame(SpeciesList[ , 1:11])
+      # SpeciesList <- merge(SpeciesList, shapes_colors, by = "row.names", all.y = FALSE)
       
-      shapes_colors <- expand.grid("symbol" = symbols,  "color" = colors)
-      SpeciesList <- as.data.frame(SpeciesList[ , 1:11])
-      SpeciesList <- merge(SpeciesList, shapes_colors, by = "row.names", all.y = FALSE)
+      SpeciesList <- as.data.frame(SpeciesList)
+      
+      symbols <- c("circle", "square", "cross", "diamond", "triangle-up", "triangle-down")
+      
+      for (i in 1:length(symbols)) {
+        pos <- which(SpeciesList$"symbol" == i)
+        if (length(pos)) {
+          SpeciesList[pos, "symbol"] <- symbols[i]
+        }
+      }
       
       AlleYoupi5 <- merge(AlleYoupi5, SpeciesList, by.x = "tadarida_taxon", by.y = "Esp", all.x = TRUE, all.y = FALSE)
       AlleYoupi5
