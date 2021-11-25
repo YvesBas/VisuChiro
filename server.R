@@ -7,8 +7,9 @@ library(data.table)
 library(lubridate)
 library(clipr)
 
+source(here::here("R", "ggvis_plot.R"))
 
-options(shiny.maxRequestSize=30*1024^2)
+options(shiny.maxRequestSize = 30 * 1024 ^ 2)
 
 # Define server logic required to draw a scatter plot
 shinyServer(function(input, output,session) {
@@ -171,83 +172,41 @@ shinyServer(function(input, output,session) {
     
     
     observe({
+      
       req(sp())
-      #if(!exists("AlleYoupi5"))
-      #{
+      
+      # if(!exists("AlleYoupi5")) {
       AlleYoupi5 <- donneesParticipation()
-      #}
-      wavdir <- wavdir()
+      # }
+      
+      wavdir  <- wavdir()
       submit0 <- 0 #initialisation du fichier s?lectionner sur le graphe par click ?
       
-      #browser()
       
+      ### DEBUG MODE - Graph ----
+      
+      # browser()
       # readr::write_rds(sp(), "sp_shiny.rds")
       # mysp <- readr::read_rds("sp_shiny.rds")
       
-      sp() %>%
-        
-        ggvis(~DateHeure, ~parametre, key:= ~Affiche) %>%
-        
-        layer_points(size   = ~tadarida_probabilite * 20, 
-                     fill   = ~factor(tadarida_taxon), 
-                     stroke = 1, 
-                     shape  = ~factor(tadarida_taxon)) %>%
-
-        set_options(width   = 820, 
-                    height  = 540, 
-                    padding = padding(5, 90, 40, 120)) %>%
-        
-        hide_legend("stroke") %>%
-        hide_legend("size") %>%
-        
-        add_legend(c("shape", "fill"), title = "Especes") %>%
-        
-        hide_legend("size") %>%
-        
-        
-        add_tooltip(function(data) {
-          
-          soundexe <- paste0(unlist(strsplit(data$"Affiche", " ")[1])[1], ".wav")
-          #soundexe <- paste(wavdir, "\\", unlist(strsplit(data$Affiche, " ")[1])[1], ".wav", sep="");
-          #ConfigSyrinx[7,1]=paste0("Sound file name=",soundexe);
-          #ConfigSyrinx[8,1]=paste0("Sound file title=",basename(soundexe));
-          #fwrite(ConfigSyrinx,"temp.dsp");
-          #shell.exec("temp.dsp")}, "click") %>%
-          #shell.exec(soundexe)}, "click") %>%
-          write_clip(soundexe)
-        }, "click") %>%
-        
-        add_tooltip(function(data) {
-          
-          qui <- which(AlleYoupi5$Affiche == data$Affiche) #affichage d'?tiquette en fonction de la position du curseur
-          output$"table2" <- renderTable(AlleYoupi5[qui, ])
-          reactiveValues()
-        
-        if (input$"submit" > submit0) { #si on a cliqu? sur "valider"
-          
-          AlleYoupi5[qui, 8:9] <<- isolate(c(input$espececorrige,input$probacorrige))
-          
-          if (!exists("AlleYoupi8")) {
-            AlleYoupi8 <- AlleYoupi5[0, ]
-          } #tableau qui s'affiche dans le dernier onglet de l'appli (validations faites)
-          
-          AlleYoupi8 <<- isolate(unique(rbind(AlleYoupi5[qui, ], AlleYoupi8))) #incr?mente les validations dans AlleYoupi8
-          #AlleYoupi7 <<- isolate(AlleYoupi5) #tableau avec validations ? sauver
-          AlleYoupi7 <<- isolate(unique((rbind(AlleYoupi8, AlleYoupi5)))) #tableau avec validations ? sauver
-          AlleYoupi7 <<- unique(as.data.table(AlleYoupi7), by = c("nom du fichier","tadarida_taxon"))
-          AlleYoupi7 <<- AlleYoupi7[order(AlleYoupi7$`nom du fichier`), ]
-          submit0 <<- input$"submit"
-        }
-          
-        output$table3 <- renderDataTable({ AlleYoupi8 }) #affiche AlleYoupi8 dans le dernier onglet
-        output$table4 <- renderDataTable({ AlleYoupi7 }) #affiche AlleYoupi8 dans le dernier onglet
-        
-        #  Sauver imm?diatement cette table modifi?e.
-      }, "click") %>%
-        
-      add_tooltip(function(data) { paste0(data$Affiche) }, "hover") %>% #d?finir l'affichage quand on "survole" des points dans le graphe
-        
-      bind_shiny("plot", "plot_ui")
+      ### END OF DEBUG MODE ----
+     
+      
+      ## Create ggvis plot ----
+      
+      ggvis_outputs <- sp() %>% 
+        ggvis_plot(AlleYoupi5, AlleYoupi7, AlleYoupi8, input$"submit", 
+                   input$"espececorrige", input$"probacorrige", submit0)
+      
+      ggvis_outputs[["gplot"]] %>% bind_shiny("plot", "plot_ui")
+      
+      
+      ## Extract outputs ----
+      
+      AlleYoupi5 <- ggvis_outputs[["AlleYoupi5"]]
+      AlleYoupi7 <- ggvis_outputs[["AlleYoupi7"]]
+      AlleYoupi8 <- ggvis_outputs[["AlleYoupi8"]]
+      submit0    <- ggvis_outputs[["submit0"]]
     })
     
     # output$table <- renderDataTable({
