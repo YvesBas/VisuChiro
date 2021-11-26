@@ -70,7 +70,7 @@ shinyUI(
                  
         ),
         
-        tabPanel("Table", dataTableOutput(outputId="table")),
+        #tabPanel("Table", dataTableOutput(outputId="table")),
         tabPanel("Dernier fichier ouvert"
                  ,
                  tableOutput(outputId="table2")
