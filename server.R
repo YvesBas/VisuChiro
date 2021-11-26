@@ -7,71 +7,82 @@ library(data.table)
 library(lubridate)
 library(clipr)
 
+source("R/clean_participation_file.R")
+
 options(shiny.maxRequestSize=30*1024^2)
 
 # Define server logic required to draw a scatter plot
 shinyServer(function(input, output,session) {
   
+  local <- reactiveValues()
+  
   observeEvent(input$do, {
+    
+    participation_parameters <- clean_participation_file(participation_file = input$fileParticipation, species_list = "SpeciesList.csv", ms = 4)
+    
+    local$AlleYoupi8 <- participation_parameters$AlleYoupi8
+    local$AlleYoupi5 <- participation_parameters$AlleYoupi5
+    local$fichiervu <- participation_parameters$fichiervu
+    
       
-    #import participation file
-    donneesParticipation <- reactive({
-      
-      ms = 4
-      SpeciesList <- fread("SpeciesList.csv", encoding = "Latin-1")
-      SpeciesList$color=factor(SpeciesList$Esp)
-      groupes=unique(SpeciesList$GroupFR)
-      especes=unique(SpeciesList$Esp)
-      infile <- input$fileParticipation
-      if (is.null(infile)){
-        return(NULL)      
-      }
-      #if(!exists("AlleYoupi5")){
-      AlleYoupi5 = fread(infile$datapath)
-      #}
-      
-      ####### Construction de la colonne DateHeure compatible POSIX
-      #bidouille pour protocoles routiers/pedestres dans les
-      if(substr(AlleYoupi5$`nom du fichier`[1],1,3)=="Cir"){
-        FileInfo=tstrsplit(AlleYoupi5$`nom du fichier`,split="-")
-        NumTron=as.numeric(gsub("Tron","",FileInfo[[4]]))
-        Heure <- substr(AlleYoupi5$`nom du fichier`,nchar(AlleYoupi5$`nom du fichier`)-11+ms,nchar(AlleYoupi5$`nom du fichier`)-8+ms)
-        DateHeure=(NumTron-1)*365+as.numeric(Heure)/3
-        DateHeure=as.Date.numeric(DateHeure,origin="01-01-1900")
-      }else{
-        
-      DateHeure <- substr(AlleYoupi5$`nom du fichier`,nchar(AlleYoupi5$`nom du fichier`)-22+ms,nchar(AlleYoupi5$`nom du fichier`)-8+ms)
-      DateHeure=ymd_hms(DateHeure,tz="Europe/Paris") 
-      }
-      
-      AlleYoupi5$DateHeure=DateHeure
-      AlleYoupi5$Date_nuit=as.Date(DateHeure-12*3600)
-      
-      
-      #Creation de variables pour l'app Shiny
-      AlleYoupi5$Affiche <- paste(AlleYoupi5$`nom du fichier`, " sp: ", AlleYoupi5$tadarida_taxon, "Confiance: ", as.character(round(AlleYoupi5$tadarida_probabilite,1), sep=""))
-      AlleYoupi5$duree_sequence=AlleYoupi5$temps_fin-AlleYoupi5$temps_debut
-      test=match(AlleYoupi5$tadarida_taxon,SpeciesList$Esp)
-      AlleYoupi5$groupe=SpeciesList$GroupFR[test]
-      AlleYoupi5$color=SpeciesList$color[test]
-      params <- c("frequence_mediane", "duree_sequence","temps_debut", "temps_fin")
-      AlleYoupi5=as.data.frame(AlleYoupi5)
-      #if(!exists("AlleYoupi7")){
-      AlleYoupi7 <- AlleYoupi5 #tableau avec validations ? sauver
-      #}
-      AlleYoupi8 <<- AlleYoupi7[0, ] #tableau qui s'affiche dans le dernier onglet de l'appli (validations faites)
-      gpnames <-append("Tous", sort(as.character(unique(AlleYoupi5$Groupe))))
-      spnames <-append("Toutes", sort(as.character(unique(AlleYoupi5$tadarida_taxon))))
-      timespan <- max(DateHeure) - min(DateHeure)
-      sliderlabel <- paste("Intervalle depuis: ", min(AlleYoupi5$DateHeure), "  jusqu'Ã  ", max(AlleYoupi5$DateHeure), sep = "")
-      mintemps <- min(DateHeure)
-      maxtemps <- max(DateHeure)
-      fichierslash <- gsub("\\\\", "/", infile$datapath)
-      coupe <- unlist(strsplit(fichierslash,"/"))
-      titre <- substr(coupe[length(coupe)], 1, nchar(coupe[length(coupe)])-4)
-      fichiervu <<- isolate(gsub(".csv","_Vu.csv",input$fileParticipation))
-      AlleYoupi5
-    })
+    # #import participation file
+    # donneesParticipation <- reactive({
+    #   
+    #   ms = 4
+    #   SpeciesList <- fread("SpeciesList.csv", encoding = "Latin-1")
+    #   SpeciesList$color=factor(SpeciesList$Esp)
+    #   groupes=unique(SpeciesList$GroupFR)
+    #   especes=unique(SpeciesList$Esp)
+    #   infile <- input$fileParticipation
+    #   if (is.null(infile)){
+    #     return(NULL)      
+    #   }
+    #   #if(!exists("AlleYoupi5")){
+    #   AlleYoupi5 = fread(infile$datapath)
+    #   #}
+    #   
+    #   ####### Construction de la colonne DateHeure compatible POSIX
+    #   #bidouille pour protocoles routiers/pedestres dans les
+    #   if(substr(AlleYoupi5$`nom du fichier`[1],1,3)=="Cir"){
+    #     FileInfo=tstrsplit(AlleYoupi5$`nom du fichier`,split="-")
+    #     NumTron=as.numeric(gsub("Tron","",FileInfo[[4]]))
+    #     Heure <- substr(AlleYoupi5$`nom du fichier`,nchar(AlleYoupi5$`nom du fichier`)-11+ms,nchar(AlleYoupi5$`nom du fichier`)-8+ms)
+    #     DateHeure=(NumTron-1)*365+as.numeric(Heure)/3
+    #     DateHeure=as.Date.numeric(DateHeure,origin="01-01-1900")
+    #   }else{
+    #     
+    #   DateHeure <- substr(AlleYoupi5$`nom du fichier`,nchar(AlleYoupi5$`nom du fichier`)-22+ms,nchar(AlleYoupi5$`nom du fichier`)-8+ms)
+    #   DateHeure=ymd_hms(DateHeure,tz="Europe/Paris") 
+    #   }
+    #   
+    #   AlleYoupi5$DateHeure=DateHeure
+    #   AlleYoupi5$Date_nuit=as.Date(DateHeure-12*3600)
+    #   
+    #   
+    #   #Creation de variables pour l'app Shiny
+    #   AlleYoupi5$Affiche <- paste(AlleYoupi5$`nom du fichier`, " sp: ", AlleYoupi5$tadarida_taxon, "Confiance: ", as.character(round(AlleYoupi5$tadarida_probabilite,1), sep=""))
+    #   AlleYoupi5$duree_sequence=AlleYoupi5$temps_fin-AlleYoupi5$temps_debut
+    #   test=match(AlleYoupi5$tadarida_taxon,SpeciesList$Esp)
+    #   AlleYoupi5$groupe=SpeciesList$GroupFR[test]
+    #   AlleYoupi5$color=SpeciesList$color[test]
+    #   params <- c("frequence_mediane", "duree_sequence","temps_debut", "temps_fin")
+    #   AlleYoupi5=as.data.frame(AlleYoupi5)
+    #   #if(!exists("AlleYoupi7")){
+    #   AlleYoupi7 <- AlleYoupi5 #tableau avec validations ? sauver
+    #   #}
+    #   AlleYoupi8 <<- AlleYoupi7[0, ] #tableau qui s'affiche dans le dernier onglet de l'appli (validations faites)
+    #   gpnames <-append("Tous", sort(as.character(unique(AlleYoupi5$Groupe))))
+    #   spnames <-append("Toutes", sort(as.character(unique(AlleYoupi5$tadarida_taxon))))
+    #   timespan <- max(DateHeure) - min(DateHeure)
+    #   sliderlabel <- paste("Intervalle depuis: ", min(AlleYoupi5$DateHeure), "  jusqu'Ã  ", max(AlleYoupi5$DateHeure), sep = "")
+    #   mintemps <- min(DateHeure)
+    #   maxtemps <- max(DateHeure)
+    #   fichierslash <- gsub("\\\\", "/", infile$datapath)
+    #   coupe <- unlist(strsplit(fichierslash,"/"))
+    #   titre <- substr(coupe[length(coupe)], 1, nchar(coupe[length(coupe)])-4)
+    #   local$fichiervu <<- isolate(gsub(".csv","_Vu.csv",input$fileParticipation))
+    #   AlleYoupi5
+    # })
     
     
     wavdir <- reactive({
@@ -86,14 +97,14 @@ shinyServer(function(input, output,session) {
     
     
    # output$paramschoix <- renderUI({
-    #  df <- donneesParticipation()
+    #  df <- local$AlleYoupi5
     #  if (is.null(df)) return(NULL)
     #  params <- c("frequence_mediane", "duree_sequence","temps_debut", "temps_fin")
      # selectInput("paramschoix", label = "Choisissez un paramÃ¨tre -> ordonnÃ©es).", choices = params, selected = "frequence_mediane")
    #  })
     
     output$idchoix <- renderUI({
-      df <- donneesParticipation()
+      df <- local$AlleYoupi5
       if (is.null(df)) return(NULL)
       selectInput("idchoix", #groupe ? afficher
                   "Groupe :",
@@ -103,7 +114,7 @@ shinyServer(function(input, output,session) {
     })
     
     output$especechoix <- renderUI({
-      df <- donneesParticipation()
+      df <- local$AlleYoupi5
       if (is.null(df)) return(NULL)
       selectInput("especechoix", #esp?ce ? afficher
                   "EspÃ¨ce :",
@@ -112,7 +123,7 @@ shinyServer(function(input, output,session) {
     })
     
     output$heures <- renderUI({
-      df <- donneesParticipation()
+      df <- local$AlleYoupi5
       if (is.null(df)) return(NULL)
       mintemps <- min(df$DateHeure)
       maxtemps <- max(df$DateHeure)
@@ -125,18 +136,18 @@ shinyServer(function(input, output,session) {
     
     sp <- reactive({
       #if(!exists("AlleYoupi5")){
-      AlleYoupi5 <- donneesParticipation()%>%
+      AlleYoupi5 <- local$AlleYoupi5%>%
         droplevels
       #}
-      if(!exists("AlleYoupi8")){AlleYoupi8 <- AlleYoupi5[0, ]} #tableau qui s'affiche dans le dernier onglet de l'appli (validations faites)
+      if(!exists("AlleYoupi8")){local$AlleYoupi8 <- local$AlleYoupi5[0, ]} #tableau qui s'affiche dans le dernier onglet de l'appli (validations faites)
       
-      if (is.null(AlleYoupi5)) return(NULL)
+      if (is.null(local$AlleYoupi5)) return(NULL)
       if (is.null(input$idchoix)) return(NULL)
-      timespan <- max(AlleYoupi5$DateHeure) - min(AlleYoupi5$DateHeure)
+      timespan <- max(local$AlleYoupi5$DateHeure) - min(local$AlleYoupi5$DateHeure)
       
       #parametre <- AlleYoupi5[,input$paramschoix] #selection du param?tre ? afficher en ordonn?e
       #AlleYoupi6 <- cbind(AlleYoupi5,parametre)
-      AlleYoupi6 <- cbind(AlleYoupi5,parametre=AlleYoupi5$frequence_mediane)
+      AlleYoupi6 <- cbind(local$AlleYoupi5,parametre=local$AlleYoupi5$frequence_mediane)
       mintemps <- min(AlleYoupi6$DateHeure) + timespan*input$heures[1]/100 #d?but axe abscisse d?fini par le sliderinput dans ui.R
       maxtemps <- min(AlleYoupi6$DateHeure) + timespan*input$heures[2]/100 #fin axe abscisse
       toplot <- subset(AlleYoupi6, AlleYoupi6$DateHeure >= mintemps & AlleYoupi6$DateHeure <= maxtemps & AlleYoupi6$tadarida_probabilite >= input$conf[1] &  AlleYoupi6$tadarida_probabilite <= input$conf[2]) #+s?lection sur les indices de confiance
@@ -156,9 +167,9 @@ shinyServer(function(input, output,session) {
     
     observe({
       req(sp())
-      #if(!exists("AlleYoupi5"))
+      #if(!exists("local$AlleYoupi5"))
       #{
-      AlleYoupi5 <- donneesParticipation()
+      local$AlleYoupi5 <- local$AlleYoupi5
       #}
       wavdir <- wavdir()
       submit0 <- 0 #initialisation du fichier s?lectionner sur le graphe par click ?
@@ -189,21 +200,21 @@ shinyServer(function(input, output,session) {
           #shell.exec(soundexe)}, "click") %>%
           write_clip(soundexe)}, "click") %>%
         
-        add_tooltip(function(data){ qui <- which(AlleYoupi5$Affiche == data$Affiche) #affichage d'?tiquette en fonction de la position du curseur
-        ; output$table2 <- renderTable(AlleYoupi5[qui, ])
+        add_tooltip(function(data){ qui <- which(local$AlleYoupi5$Affiche == data$Affiche) #affichage d'?tiquette en fonction de la position du curseur
+        ; output$table2 <- renderTable(local$AlleYoupi5[qui, ])
         reactiveValues()
         
         if (input$submit > submit0) { #si on a cliqu? sur "valider"
-          AlleYoupi5[qui, 8:9] <<- isolate(c(input$espececorrige,input$probacorrige))
-          if(!exists("AlleYoupi8")){AlleYoupi8 <- AlleYoupi5[0, ]} #tableau qui s'affiche dans le dernier onglet de l'appli (validations faites)
-          AlleYoupi8 <<- isolate(unique(rbind(AlleYoupi5[qui, ],AlleYoupi8))) #incr?mente les validations dans AlleYoupi8
-          #AlleYoupi7 <<- isolate(AlleYoupi5) #tableau avec validations ? sauver
-          AlleYoupi7 <<- isolate(unique((rbind(AlleYoupi8,AlleYoupi5))
+          local$AlleYoupi5[qui, 8:9] <<- isolate(c(input$espececorrige,input$probacorrige))
+          if(!exists("AlleYoupi8")){local$AlleYoupi8 <- local$AlleYoupi5[0, ]} #tableau qui s'affiche dans le dernier onglet de l'appli (validations faites)
+          local$AlleYoupi8 <<- isolate(unique(rbind(local$AlleYoupi5[qui, ],local$AlleYoupi8))) #incr?mente les validations dans AlleYoupi8
+          #AlleYoupi7 <<- isolate(local$AlleYoupi5) #tableau avec validations ? sauver
+          AlleYoupi7 <<- isolate(unique((rbind(local$AlleYoupi8,local$AlleYoupi5))
                                         )) #tableau avec validations ? sauver
           AlleYoupi7<<-unique(as.data.table(AlleYoupi7),by=c("nom du fichier","tadarida_taxon"))
           AlleYoupi7<<-AlleYoupi7[order(AlleYoupi7$`nom du fichier`),]
           submit0 <<- input$submit}
-        output$table3 <- renderDataTable({AlleYoupi8 }) #affiche AlleYoupi8 dans le dernier onglet
+        output$table3 <- renderDataTable({local$AlleYoupi8 }) #affiche AlleYoupi8 dans le dernier onglet
         output$table4 <- renderDataTable({AlleYoupi7 }) #affiche AlleYoupi8 dans le dernier onglet
         
         #  Sauver imm?diatement cette table modifi?e.
@@ -215,7 +226,7 @@ shinyServer(function(input, output,session) {
     })
     
     # output$table <- renderDataTable({
-    #data <- AlleYoupi5
+    #data <- local$AlleYoupi5
     # if (input$idchoix != "Tous"){
     #    data <- data[data$groupe == input$idchoix,]
     #   }
@@ -235,12 +246,12 @@ shinyServer(function(input, output,session) {
     #output$rowno <- renderPrint({ rown })
     output$downloadData <- downloadHandler(
       #filename="temp.csv",
-      filename=function(){fichiervu},
+      filename=function(){local$fichiervu},
       content = function(file) {
         fwrite(AlleYoupi7, file,row.names=F,na="",sep=";")
       })
     
     #on.exit(rm(list= ls()))
-    #onStop(function() rm(list=c("AlleYoupi7","AlleYoupi8","fichiervu")))
+    #onStop(function() rm(list=c("AlleYoupi7","AlleYoupi8","local$fichiervu")))
   })
 })
