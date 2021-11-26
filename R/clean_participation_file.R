@@ -58,7 +58,7 @@ clean_participation_file <- function (participation_file, species_list = "Specie
   fichierslash <- gsub("\\\\", "/", participation_file)
   coupe <- unlist(strsplit(fichierslash,"/"))
   participation_file_parameters <- list(
-    AlleYoupi8 = AlleYoupi7[0, ], #tableau qui s'affiche dans le dernier onglet de l'appli (validations faites)
+    validations = AlleYoupi7[0, ], #tableau qui s'affiche dans le dernier onglet de l'appli (validations faites)
     gpnames = append("Tous", sort(as.character(unique(AlleYoupi5$Groupe)))),
     spnames = append("Toutes", sort(as.character(unique(AlleYoupi5$tadarida_taxon)))),
     timespan = max(DateHeure) - min(DateHeure),
@@ -67,7 +67,8 @@ clean_participation_file <- function (participation_file, species_list = "Specie
     maxtemps = max(DateHeure),
     titre = substr(coupe[length(coupe)], 1, nchar(coupe[length(coupe)])-4),
     fichiervu = gsub(".csv","_Vu.csv", participation_file),
-    AlleYoupi5 = AlleYoupi5
+    participation_data = AlleYoupi5,
+    participation_and_validation_data = AlleYoupi7
   )
   return(participation_file_parameters)
 }
