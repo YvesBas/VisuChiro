@@ -2,17 +2,17 @@ choix_especes_UI <- function(id) {
   ns <- NS(id)
   
   tagList(
-    actionButton(ns("especes_bttn"), "Espèces"),
-    actionButton(ns("dev"), "DEV")
+    actionButton(ns("especes_bttn"), "Espèces")
+    # , actionButton(ns("dev"), "DEV")
   )
 }
 
 choix_especes <- function(id, listeEspeces) {
   moduleServer(id, function(input, output, session) {
     # dev
-    observeEvent(input$dev, {
-      browser()
-    })
+    # observeEvent(input$dev, {
+    #   browser()
+    # })
     
     # Get species list
     SpeciesList <- fread("SpeciesList.csv", encoding = "Latin-1")
@@ -27,7 +27,6 @@ choix_especes <- function(id, listeEspeces) {
       x <- try(showModal(
         modalDialog(
           title = "Choix des espèces",
-          actionButton(session$ns("dev"), "DEV"),
           tags$div(
             style = "columns: 4",
             lapply(
@@ -98,18 +97,22 @@ choix_especes <- function(id, listeEspeces) {
       .selected <- sapply(unique(listeEspeces$Group), function(g) input[[g]])
       .selected[lengths(.selected) != 0] # lengthS with a S ! 
     })
+    
+    return(selectedSpecies)
   })
 }
 
 # TEST =====
-# library(shiny)
-# 
-# ui <- fluidPage(
-#   choix_especes_UI("especes")
-# )
-# 
-# server <- function(input, output, session) {
-#   choix_especes("especes")
-# }
-# 
-# shinyApp(ui, server)
+library(shiny)
+
+ui <- fluidPage(
+  choix_especes_UI("especes"),
+  textOutput("dims")
+)
+
+server <- function(input, output, session) {
+  selectedSpecies <- choix_especes("especes")
+  output$dims <- renderText({lengths(selectedSpecies())})
+}
+
+shinyApp(ui, server)
