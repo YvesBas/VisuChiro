@@ -30,7 +30,7 @@ shinyUI(
                  actionButton("do", "Valider"),
                  #uiOutput("paramschoix"),
                  uiOutput("idchoix"),
-                 uiOutput("especechoix"),
+                 #uiOutput("especechoix"),
                  sliderInput("conf", #s?lection sur le score de Tadarida
                              label = "Indice de confiance de l'espèce :",
                              min = 0, max = 1, value = c(0.5, 1))
